@@ -673,7 +673,14 @@ func iterStruct(file *ast.File) <-chan namedStruct {
 			}
 			if gd.Recv != nil && gd.Recv.List != nil && len(gd.Recv.List) > 0 {
 				field := gd.Recv.List[0]
-				typ := field.Type.(*ast.StarExpr).X.(*ast.Ident).Name
+
+				typ := ""
+				switch v := field.Type.(type) {
+				case *ast.StarExpr:
+					typ = v.X.(*ast.Ident).Name
+				case *ast.Ident:
+					typ = v.Name
+				}
 
 				nameStruct := structMap[typ]
 				nameStruct.methods = append(nameStruct.methods, gd)
