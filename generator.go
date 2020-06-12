@@ -238,11 +238,11 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	}
 
 	g.in()
-	g.p("interfaceImpl := &%v{}", mockType)
+	g.p("implObj := &%v{}", mockType)
 	g.p("")
-	g.p("// TODO: ...")
+	g.p("// TODO: New%v() Not implemented", mockType)
 	g.p("")
-	g.p("return interfaceImpl")
+	g.p("return implObj")
 	g.out()
 	g.p("}")
 	g.p("")
@@ -292,7 +292,8 @@ func (g *generator) GenerateMockMethod(mockType string, m *model.Method, pkgOver
 
 	g.in()
 
-	g.p("panic(\"*%v.%v(%v)%v Not implemented\")", mockType, m.Name, argString, retString)
+	g.p("// TODO: %v.%v(%v)%v Not implemented", mockType, m.Name, argString, retString)
+	g.p("panic(\"%v.%v(%v)%v Not implemented\")", mockType, m.Name, argString, retString)
 	g.out()
 	g.p("}")
 	return nil
