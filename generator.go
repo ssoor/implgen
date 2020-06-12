@@ -81,7 +81,6 @@ func (g *generator) Generate(pkg *model.Package, outputPkgName string, outputPac
 		}
 
 		pkg.Interfaces = newInterfaces
-		fmt.Printf("%+v-%+v-%+v\n", dstPkg.Interfaces, namesMap, pkg.Interfaces)
 	}
 
 	return g.generate(pkg, outputPkgName, outputPackagePath)
