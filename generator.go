@@ -293,6 +293,7 @@ func (g *generator) GenerateMockMethod(mockType string, m *model.Method, pkgOver
 	g.in()
 
 	g.p("// TODO: %v.%v(%v)%v Not implemented", mockType, m.Name, argString, retString)
+	g.p("")
 	g.p("panic(\"%v.%v(%v)%v Not implemented\")", mockType, m.Name, argString, retString)
 	g.out()
 	g.p("}")

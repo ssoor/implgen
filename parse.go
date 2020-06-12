@@ -683,7 +683,9 @@ func iterStruct(file *ast.File) <-chan namedStruct {
 				}
 
 				nameStruct := structMap[typ]
-				nameStruct.methods = append(nameStruct.methods, gd)
+				if nameStruct != nil {
+					nameStruct.methods = append(nameStruct.methods, gd)
+				}
 			}
 			for _, s := range structMap {
 				ch <- *s
