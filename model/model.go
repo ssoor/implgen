@@ -28,10 +28,11 @@ const pkgPath = "github.com/ssoor/implgen/model"
 
 // Package is a Go package. It may be a subset.
 type Package struct {
-	Name       string
-	PkgPath    string
-	Interfaces []*Interface
-	DotImports []string
+	Name        string
+	PkgPath     string
+	Interfaces  []*Interface
+	StructNames []*Struct
+	DotImports  []string
 }
 
 // Print writes the package name and its exported interfaces.
@@ -49,6 +50,14 @@ func (pkg *Package) Imports() map[string]bool {
 		intf.addImports(im)
 	}
 	return im
+}
+
+// Interface is a Go interface.
+type Struct struct {
+	Name    string
+	Doc     []string
+	Comment string
+	Methods map[string]*Method
 }
 
 // Interface is a Go interface.

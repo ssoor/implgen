@@ -64,6 +64,8 @@ func sourceMode(source string) (*model.Package, error) {
 	p := &fileParser{
 		fileSet:            fs,
 		imports:            make(map[string]importedPackage),
+		auxStruct:          make(map[string]map[string]namedStruct),
+		importedStruct:     make(map[string]map[string]namedStruct),
 		importedInterfaces: make(map[string]map[string]namedInterface),
 		auxInterfaces:      make(map[string]map[string]namedInterface),
 		srcDir:             srcDir,
@@ -134,9 +136,11 @@ func (d duplicateImport) Parser() *fileParser { log.Fatal(d.Error()); return nil
 type fileParser struct {
 	fileSet            *token.FileSet
 	imports            map[string]importedPackage           // package name => imported package
+	importedStruct     map[string]map[string]namedStruct    // package (or "") => name => struct
 	importedInterfaces map[string]map[string]namedInterface // package (or "") => name => interface
 
 	auxFiles      []*ast.File
+	auxStruct     map[string]map[string]namedStruct    // package (or "") => name => struct
 	auxInterfaces map[string]map[string]namedInterface // package (or "") => name => interface
 
 	srcDir string
@@ -172,6 +176,13 @@ func (p *fileParser) parseAuxFiles(auxFiles string) error {
 }
 
 func (p *fileParser) addAuxInterfacesFromFile(pkg string, file *ast.File) {
+	if _, ok := p.auxStruct[pkg]; !ok {
+		p.auxStruct[pkg] = make(map[string]namedStruct)
+	}
+	for ni := range iterStruct(file) {
+		p.auxStruct[pkg][ni.name.Name] = ni
+	}
+
 	if _, ok := p.auxInterfaces[pkg]; !ok {
 		p.auxInterfaces[pkg] = make(map[string]namedInterface)
 	}
@@ -209,11 +220,21 @@ func (p *fileParser) parseFile(importPath string, file *ast.File) (*model.Packag
 		}
 		is = append(is, i)
 	}
+
+	var ss []*model.Struct
+	for ni := range iterStruct(file) {
+		i, err := p.parseStruct(ni.name.String(), importPath, ni)
+		if err != nil {
+			return nil, err
+		}
+		ss = append(ss, i)
+	}
 	return &model.Package{
-		Name:       file.Name.String(),
-		PkgPath:    importPath,
-		Interfaces: is,
-		DotImports: dotImports,
+		Name:        file.Name.String(),
+		PkgPath:     importPath,
+		Interfaces:  is,
+		StructNames: ss,
+		DotImports:  dotImports,
 	}, nil
 }
 
@@ -223,6 +244,8 @@ func (p *fileParser) parsePackage(path string) (*fileParser, error) {
 	newP := &fileParser{
 		fileSet:            token.NewFileSet(),
 		imports:            make(map[string]importedPackage),
+		auxStruct:          make(map[string]map[string]namedStruct),
+		importedStruct:     make(map[string]map[string]namedStruct),
 		importedInterfaces: make(map[string]map[string]namedInterface),
 		auxInterfaces:      make(map[string]map[string]namedInterface),
 		srcDir:             p.srcDir,
@@ -249,6 +272,38 @@ func (p *fileParser) parsePackage(path string) (*fileParser, error) {
 		}
 	}
 	return newP, nil
+}
+
+func (p *fileParser) parseStruct(name, pkg string, it namedStruct) (*model.Struct, error) {
+	intf := &model.Struct{Name: name, Methods: make(map[string]*model.Method)}
+
+	if nil != it.doc {
+		for _, comment := range it.doc.List {
+			intf.Doc = append(intf.Doc, comment.Text)
+		}
+	}
+	if nil != it.comment {
+		intf.Comment = it.comment.Text()
+
+		// for _, comment := range it.comment.List {
+		//  intf.Comment = append(intf.Comment, comment.Text)
+		// }
+	}
+
+	for _, field := range it.methods {
+		m := &model.Method{
+			Name: field.Name.String(),
+		}
+
+		if nil != field.Doc {
+			for _, comment := range field.Doc.List {
+				m.Doc = append(m.Doc, comment.Text)
+			}
+		}
+
+		intf.Methods[m.Name] = m
+	}
+	return intf, nil
 }
 
 func (p *fileParser) parseInterface(name, pkg string, it namedInterface) (*model.Interface, error) {
@@ -579,6 +634,58 @@ type namedInterface struct {
 	comment *ast.CommentGroup
 	it      *ast.InterfaceType
 }
+type namedStruct struct {
+	name    *ast.Ident
+	doc     *ast.CommentGroup
+	comment *ast.CommentGroup
+	it      *ast.StructType
+	methods []*ast.FuncDecl
+}
+
+// Create an iterator over all interfaces in file.
+func iterStruct(file *ast.File) <-chan namedStruct {
+	ch := make(chan namedStruct)
+	go func() {
+		structMap := make(map[string]*namedStruct)
+		for _, decl := range file.Decls {
+			gd, ok := decl.(*ast.GenDecl)
+			if !ok || gd.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range gd.Specs {
+				ts, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				it, ok := ts.Type.(*ast.StructType)
+				if !ok {
+					continue
+				}
+
+				structMap[ts.Name.String()] = &namedStruct{ts.Name, gd.Doc, ts.Comment, it, []*ast.FuncDecl{}}
+			}
+		}
+
+		for _, decl := range file.Decls {
+			gd, ok := decl.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+			if gd.Recv != nil && gd.Recv.List != nil && len(gd.Recv.List) > 0 {
+				field := gd.Recv.List[0]
+				typ := field.Type.(*ast.StarExpr).X.(*ast.Ident).Name
+
+				nameStruct := structMap[typ]
+				nameStruct.methods = append(nameStruct.methods, gd)
+			}
+			for _, s := range structMap {
+				ch <- *s
+			}
+		}
+		close(ch)
+	}()
+	return ch
+}
 
 // Create an iterator over all interfaces in file.
 func iterInterfaces(file *ast.File) <-chan namedInterface {
@@ -599,7 +706,7 @@ func iterInterfaces(file *ast.File) <-chan namedInterface {
 					continue
 				}
 
-				ch <- namedInterface{ts.Name, ts.Doc, ts.Comment, it}
+				ch <- namedInterface{ts.Name, gd.Doc, ts.Comment, it}
 			}
 		}
 		close(ch)
