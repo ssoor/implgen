@@ -1,4 +1,4 @@
-implgen [![Build Status][travis-ci-badge]][travis-ci] [![GoDoc][godoc-badge]][godoc]
+LmplGen
 ======
 
 ImoGen is a interface implementation code generation tool for the [Go programming language][golang].
@@ -134,3 +134,12 @@ func (m *Foo) Bar(x int) int {  // Comment:Foo.Bar
     panic("Foo.Bar(x int) int Not implemented")
 }
 ```
+
+
+[golang]:          http://golang.org/
+[golang-install]:  http://golang.org/doc/install.html#releases
+[gomock-ref]:      http://godoc.org/github.com/golang/mock/gomock
+[travis-ci-badge]: https://travis-ci.org/golang/mock.svg?branch=master
+[travis-ci]:       https://travis-ci.org/golang/mock
+[godoc-badge]:     https://godoc.org/github.com/golang/mock/gomock?status.svg
+[godoc]:           https://godoc.org/github.com/golang/mock/gomock
