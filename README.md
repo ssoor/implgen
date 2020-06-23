@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 implgen [![Build Status][travis-ci-badge]][travis-ci] [![GoDoc][godoc-badge]][godoc]
+=======
+LmplGen
+>>>>>>> 09ad4abec47dd2fe48b657bf3dcbfa2419221064
 ======
 
 ImoGen is a interface implementation code generation tool for the [Go programming language][golang].
@@ -16,6 +20,46 @@ GO111MODULE=on go get github.com/ssoor/implgen@latest
 
 If you use `implgen` in your CI pipeline, it may be more appropriate to fixate
 on a specific implgen version.
+
+Building Implemented Code
+--------------
+
+input code: 
+
+```go
+// Doc:Test Foo
+type Foo interface {
+  // Doc:Foo.Bar
+  Bar(x int) int // Comment:Foo.Bar
+}
+
+```
+
+output code:
+
+```go
+
+// Doc:Test Foo
+type Foo struct {
+}
+
+// Doc:Test Foo
+func NewFoo() *Foo {
+    implObj := &Foo{}
+
+    // TODO: NewFoo() Not implemented
+
+    return implObj
+}
+
+// Doc:Foo.Bar
+func (m *Foo) Bar(x int) int {  // Comment:Foo.Bar
+    // TODO: Foo.Bar(x int) int Not implemented
+
+    panic("Foo.Bar(x int) int Not implemented")
+}
+```
+
 
 Running implgen
 ---------------
@@ -47,16 +91,16 @@ implgen database/sql/driver Conn,Driver
 implgen . Conn,Driver
 ```
 
-The `implgen` command is used to generate source code for a mock
-class given a Go source file containing interfaces to be mocked.
+The `implgen` command is used to generate source code for a implement
+class given a Go source file containing interfaces to be implemented.
 It supports the following flags:
 
-* `-source`: A file containing interfaces to be mocked.
+* `-source`: A file containing interfaces to be implemented.
 
 * `-destination`: A file to which to write the resulting source code. If you
     don't set this, the code is printed to standard output.
 
-* `-package`: The package to use for the resulting mock class
+* `-package`: The package to use for the resulting implement class
     source code. If you don't set this, the package name is `mock_` concatenated
     with the package of the input file.
 
@@ -73,17 +117,17 @@ It supports the following flags:
 
 * `-build_flags`: (reflect mode only) Flags passed verbatim to `go build`.
 
-* `-mock_names`: A list of custom names for generated mocks. This is specified
+* `-mock_names`: A list of custom names for generated implements. This is specified
     as a comma-separated list of elements of the form
     `Repository=MockSensorRepository,Endpoint=MockSensorEndpoint`, where
     `Repository` is the interface name and `MockSensorRepository` is the desired
-    mock name (mock factory method and mock recorder will be named after the mock).
+    implement name (implement factory method and implement recorder will be named after the implement).
     If one of the interfaces has no custom name specified, then default naming
     convention will be used.
     
 * `-self_package`: The full package import path for the generated code. The purpose 
     of this flag is to prevent import cycles in the generated code by trying to include 
-    its own package. This can happen if the mock's package is set to one of its 
+    its own package. This can happen if the implement's package is set to one of its 
     inputs (usually the main one) and the output is stdio so implgen cannot detect the 
     final output package. Setting this flag will then tell implgen which import to exclude.
 
@@ -92,45 +136,11 @@ It supports the following flags:
 For an example of the use of `implgen`, see the `sample/` directory. In simple
 cases, you will need only the `-source` flag.
 
-Building Implemented Code
---------------
 
-input code: 
-
-```go
-// Doc:Test Foo
-type Foo interface {
-  // Doc:Foo.Bar
-  Bar(x int) int // Comment:Foo.Bar
-}
-
-func SUT(f Foo) {
- // ...
-}
-
-```
-
-output code:
-
-```go
-
-// Doc:Test Foo
-type Foo struct {
-}
-
-// Doc:Test Foo
-func NewFoo() *Foo {
-    implObj := &Foo{}
-
-    // TODO: NewFoo() Not implemented
-
-    return implObj
-}
-
-// Doc:Foo.Bar
-func (m *Foo) Bar(x int) int {  // Comment:Foo.Bar
-    // TODO: Foo.Bar(x int) int Not implemented
-
-    panic("Foo.Bar(x int) int Not implemented")
-}
-```
+[golang]:          http://golang.org/
+[golang-install]:  http://golang.org/doc/install.html#releases
+[gomock-ref]:      http://godoc.org/github.com/golang/mock/gomock
+[travis-ci-badge]: https://travis-ci.org/golang/mock.svg?branch=master
+[travis-ci]:       https://travis-ci.org/golang/mock
+[godoc-badge]:     https://godoc.org/github.com/golang/mock/gomock?status.svg
+[godoc]:           https://godoc.org/github.com/golang/mock/gomock
