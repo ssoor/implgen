@@ -47,15 +47,15 @@ var (
 )
 
 var (
-	source          = flag.String("source", "", "(source mode) Input Go source file; enables source mode.")
-	destination     = flag.String("destination", "", "Output file; defaults to stdout.")
-	mockNames       = flag.String("mock_names", "", "Comma-separated interfaceName=mockName pairs of explicit mock names to use. Mock names default to 'Mock'+ interfaceName suffix.")
-	packageOut      = flag.String("package", "", "Package of the generated code; defaults to the package of the input with a 'mock_' prefix.")
+	source          = flag.String("source", "", "接口定义文件/源文件，工具根据源文件生成输出结果")
+	destination     = flag.String("destination", "", "指定输出文件路径，默认将内容输出到控制台")
+	implNames       = flag.String("impl_names", "", "传参为逗号分隔的 `intefaceName=implementName` 对，用来指定接口生成的结构名。默认名会根据 `interfaceName `生成，如果 `interfaceName` 后缀为 `Interface` 则删除 `Interface` 后缀后作为名称，如果没有 `Interface` 后缀就直接使用 `interfaceName`")
+	packageOut      = flag.String("package", "", "代码生成的包名（package <包名>）")
 	selfPackage     = flag.String("self_package", "", "The full package import path for the generated code. The purpose of this flag is to prevent import cycles in the generated code by trying to include its own package. This can happen if the mock's package is set to one of its inputs (usually the main one) and the output is stdio so mockgen cannot detect the final output package. Setting this flag will then tell mockgen which import to exclude.")
 	writePkgComment = flag.Bool("write_package_comment", false, "Writes package documentation comment (godoc) if true.")
 	copyrightFile   = flag.String("copyright_file", "", "Copyright file used to add copyright header")
 
-	debugParser = flag.Bool("debug_parser", false, "Print out parser results only.")
+	debugParser = flag.Bool("debug_parser", false, "仅打印解析器解析结果")
 	showVersion = flag.Bool("version", false, "Print version.")
 )
 
@@ -104,7 +104,7 @@ func main() {
 	if outputPackageName == "" {
 		// pkg.Name in reflect mode is the base name of the import path,
 		// which might have characters that are illegal to have in package names.
-		outputPackageName = "mock_" + sanitize(pkg.Name)
+		outputPackageName = "impl_" + sanitize(pkg.Name)
 	}
 
 	// outputPackagePath represents the fully qualified name of the package of
@@ -137,8 +137,8 @@ func main() {
 		g.srcInterfaces = flag.Arg(1)
 	}
 
-	if *mockNames != "" {
-		g.mockNames = parseMockNames(*mockNames)
+	if *implNames != "" {
+		g.mockNames = parseMockNames(*implNames)
 	}
 	if *copyrightFile != "" {
 		header, err := ioutil.ReadFile(*copyrightFile)

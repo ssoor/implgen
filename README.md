@@ -97,23 +97,10 @@ It supports the following flags:
     don't set this, the code is printed to standard output.
 
 * `-package`: The package to use for the resulting implement class
-    source code. If you don't set this, the package name is `mock_` concatenated
+    source code. If you don't set this, the package name is `impl_` concatenated
     with the package of the input file.
 
-* `-imports`: A list of explicit imports that should be used in the resulting
-    source code, specified as a comma-separated list of elements of the form
-    `foo=bar/baz`, where `bar/baz` is the package being imported and `foo` is
-    the identifier to use for the package in the generated source code.
-
-* `-aux_files`: A list of additional files that should be consulted to
-    resolve e.g. embedded interfaces defined in a different file. This is
-    specified as a comma-separated list of elements of the form
-    `foo=bar/baz.go`, where `bar/baz.go` is the source file and `foo` is the
-    package name of that file used by the -source file.
-
-* `-build_flags`: (reflect mode only) Flags passed verbatim to `go build`.
-
-* `-mock_names`: A list of custom names for generated implements. This is specified
+* `-impl_names`: A list of custom names for generated implements. This is specified
     as a comma-separated list of elements of the form
     `Repository=MockSensorRepository,Endpoint=MockSensorEndpoint`, where
     `Repository` is the interface name and `MockSensorRepository` is the desired
@@ -128,6 +115,19 @@ It supports the following flags:
     final output package. Setting this flag will then tell implgen which import to exclude.
 
 * `-copyright_file`: Copyright file used to add copyright header to the resulting source code.
+
+* `-imports`: A list of explicit imports that should be used in the resulting
+    source code, specified as a comma-separated list of elements of the form
+    `foo=bar/baz`, where `bar/baz` is the package being imported and `foo` is
+    the identifier to use for the package in the generated source code.
+
+* `-aux_files`: A list of additional files that should be consulted to
+    resolve e.g. embedded interfaces defined in a different file. This is
+    specified as a comma-separated list of elements of the form
+    `foo=bar/baz.go`, where `bar/baz.go` is the source file and `foo` is the
+    package name of that file used by the -source file.
+
+* `-build_flags`: (reflect mode only) Flags passed verbatim to `go build`.
 
 For an example of the use of `implgen`, see the `sample/` directory. In simple
 cases, you will need only the `-source` flag.
