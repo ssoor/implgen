@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-implgen [![Build Status][travis-ci-badge]][travis-ci] [![GoDoc][godoc-badge]][godoc]
-=======
-LmplGen
->>>>>>> 09ad4abec47dd2fe48b657bf3dcbfa2419221064
+ImplGen
 ======
 
 ImoGen is a interface implementation code generation tool for the [Go programming language][golang].
