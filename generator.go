@@ -210,9 +210,6 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	mockType := g.mockName(intf.Name)
 
 	g.p("")
-	for _, doc := range intf.Doc {
-		g.p("%v", doc)
-	}
 	if 0 == len(intf.Comment) {
 		g.p("type %v struct {", mockType)
 	} else {
@@ -229,6 +226,10 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	// g.p("")
 
 	for _, doc := range intf.Doc {
+		if strings.HasPrefix(strings.ToLower(doc), "//go:generate ") { // 生成语句不复制到实现文件中
+			continue
+		}
+
 		g.p("%v", doc)
 	}
 	if 0 == len(intf.Comment) {
@@ -282,6 +283,10 @@ func (g *generator) GenerateMockMethod(mockType string, m *model.Method, pkgOver
 	idRecv := ia.allocateIdentifier("m")
 
 	for _, doc := range m.Doc {
+		if strings.HasPrefix(strings.ToLower(doc), "//go:generate ") { // 生成语句不复制到实现文件中
+			continue
+		}
+
 		g.p("%v", doc)
 	}
 	if 0 == len(m.Comment) {
