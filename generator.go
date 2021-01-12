@@ -210,6 +210,15 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	mockType := g.mockName(intf.Name)
 
 	g.p("")
+
+	for _, doc := range intf.Doc {
+		if strings.HasPrefix(strings.ToLower(doc), "//go:generate ") { // 生成语句不复制到实现文件中
+			continue
+		}
+
+		g.p("%v", doc)
+	}
+
 	if 0 == len(intf.Comment) {
 		g.p("type %v struct {", mockType)
 	} else {
@@ -225,25 +234,19 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	// g.p("var _ %v = (*%v)(nil)", typeName, mockType)
 	// g.p("")
 
-	for _, doc := range intf.Doc {
-		if strings.HasPrefix(strings.ToLower(doc), "//go:generate ") { // 生成语句不复制到实现文件中
-			continue
-		}
-
-		g.p("%v", doc)
-	}
+	g.p("// New%v create a new %v object", mockType, mockType)
 	if 0 == len(intf.Comment) {
-		g.p("func New%v() *%v {", mockType, mockType)
+		g.p("func New%v(_ context.Context) *%v {", mockType, mockType)
 	} else {
-		g.p("func New%v() *%v { // %v", mockType, mockType, intf.Comment)
+		g.p("func New%v(_ context.Context) *%v { // %v", mockType, mockType, intf.Comment)
 	}
 
 	g.in()
-	g.p("implObj := &%v{}", mockType)
+	g.p("obj := &%v{}", mockType)
 	g.p("")
-	g.p("// TODO: New%v() Not implemented", mockType)
+	g.p("// TODO: New%v(_ context.Context) Not implemented", mockType)
 	g.p("")
-	g.p("return implObj")
+	g.p("return obj")
 	g.out()
 	g.p("}")
 	g.p("")
