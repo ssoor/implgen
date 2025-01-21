@@ -261,6 +261,32 @@ func (mt *MapType) addImports(im map[string]bool) {
 }
 
 // NamedType is an exported type in a package.
+type GenericType struct {
+	T     Type
+	Types []Type
+}
+
+func (nt *GenericType) String(pm map[string]string, pkgOverride string) string {
+	types := ""
+	if len(nt.Types) > 0 {
+		for _, v := range nt.Types {
+			types += v.String(pm, pkgOverride) + ","
+		}
+
+		types = types[:len(types)-1]
+	}
+
+	return nt.T.String(pm, pkgOverride) + "[" + types + "]"
+}
+
+func (nt *GenericType) addImports(im map[string]bool) {
+	nt.T.addImports(im)
+	for _, v := range nt.Types {
+		v.addImports(im)
+	}
+}
+
+// NamedType is an exported type in a package.
 type NamedType struct {
 	Package string // may be empty
 	Type    string // TODO: should this be typed Type?

@@ -22,6 +22,7 @@ type generator struct {
 	dstFileName               string
 	indent                    string
 	mockNames                 map[string]string // may be empty
+	mockInterfaces            map[string]bool   // may be empty
 	filename                  string            // may be empty
 	srcPackage, srcInterfaces string            // may be empty
 	copyrightHeader           string
@@ -55,37 +56,9 @@ func (g *generator) Generate(pkg *model.Package, outputPkgName string, outputPac
 		g.head = true
 		g.generateHead(pkg, outputPkgName, outputPackagePath)
 	} else {
-		namesMap := make(map[string]*model.Struct)
-		for _, sn := range dstPkg.StructNames {
-			namesMap[sn.Name] = sn
-		}
-
-		newInterfaces := make([]*model.Interface, 0)
-		for _, intf := range pkg.Interfaces {
-			sn, exist := namesMap[g.mockName(intf.Name)]
-			if exist {
-				newMethods := make([]*model.Method, 0)
-				for _, m := range intf.Methods {
-					if _, exist = sn.Methods[m.Name]; exist {
-						continue
-					}
-					newMethods = append(newMethods, m)
-				}
-
-				if 0 != len(newMethods) {
-					intf.Methods = newMethods
-					mockType := g.mockName(intf.Name)
-					g.GenerateMockMethods(mockType, intf, outputPackagePath)
-				}
-			} else {
-				newInterfaces = append(newInterfaces, intf)
-			}
-		}
-
-		pkg.Interfaces = newInterfaces
 	}
 
-	return g.generate(pkg, outputPkgName, outputPackagePath)
+	return g.generate(pkg, dstPkg, outputPkgName, outputPackagePath)
 }
 
 func (g *generator) generatePackageMap(pkg *model.Package, outputPkgName string, outputPackagePath string) {
@@ -182,8 +155,38 @@ func (g *generator) generateHead(pkg *model.Package, outputPkgName string, outpu
 	g.p(")")
 }
 
-func (g *generator) generate(pkg *model.Package, outputPkgName string, outputPackagePath string) error {
+func (g *generator) generate(pkg *model.Package, dstPkg *model.Package, outputPkgName string, outputPackagePath string) error {
+	namesMap := make(map[string]*model.Struct)
+	if dstPkg != nil {
+		for _, sn := range dstPkg.StructNames {
+			namesMap[sn.Name] = sn
+		}
+	}
+
 	for _, intf := range pkg.Interfaces {
+		if len(g.mockInterfaces) != 0 && !g.mockInterfaces[intf.Name] {
+			continue
+		}
+
+		sn, exist := namesMap[g.mockName(intf.Name)]
+		if exist {
+			newMethods := make([]*model.Method, 0)
+			for _, m := range intf.Methods {
+				if _, exist = sn.Methods[m.Name]; exist {
+					continue
+				}
+				newMethods = append(newMethods, m)
+			}
+
+			if len(newMethods) != 0 {
+				intf.Methods = newMethods
+				mockType := g.mockName(intf.Name)
+				g.GenerateMockMethods(mockType, intf, outputPackagePath)
+			}
+
+			continue
+		}
+
 		if err := g.GenerateMockInterface(intf, outputPackagePath); err != nil {
 			return err
 		}
@@ -198,12 +201,14 @@ func (g *generator) mockName(typeName string) string {
 		return mockName
 	}
 
-	suffix := "Interface"
-	if suffix == typeName[len(typeName)-len(suffix):] {
-		return typeName[:len(typeName)-len(suffix)]
+	for _, suffix := range []string{"Interface", "Service", "Handler", "Server"} {
+		if suffix == typeName[len(typeName)-len(suffix):] {
+			typeName = typeName[:len(typeName)-len(suffix)]
+			break
+		}
 	}
 
-	return typeName
+	return strings.ToLower(string(typeName[0])) + typeName[1:]
 }
 
 func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePath string) error {
@@ -266,7 +271,7 @@ func (g *generator) GenerateMockMethods(mockType string, intf *model.Interface, 
 // GenerateMockMethod generates a mock method implementation.
 // If non-empty, pkgOverride is the package in which unqualified types reside.
 func (g *generator) GenerateMockMethod(mockType string, m *model.Method, pkgOverride string) error {
-	argNames := g.getArgNames(m)
+	argNames := g.getArgNames(m, pkgOverride)
 	argTypes := g.getArgTypes(m, pkgOverride)
 	argString := makeArgString(argNames, argTypes)
 
@@ -308,13 +313,27 @@ func (g *generator) GenerateMockMethod(mockType string, m *model.Method, pkgOver
 	return nil
 }
 
-func (g *generator) getArgNames(m *model.Method) []string {
+func (g *generator) getArgNames(m *model.Method, pkgOverride string) []string {
 	argNames := make([]string, len(m.In))
+	args := make(map[string]bool)
 	for i, p := range m.In {
 		name := p.Name
 		if name == "" || name == "_" {
-			name = fmt.Sprintf("arg%d", i)
+			typName := p.Type.String(g.packageMap, pkgOverride)
+			switch typName {
+			case "error":
+				name = "err"
+			case "context.Context":
+				name = "ctx"
+			default:
+				name = "arg"
+			}
+
+			if args[name] {
+				name = name + strconv.Itoa(i)
+			}
 		}
+		args[name] = true
 		argNames[i] = name
 	}
 	if m.Variadic != nil {

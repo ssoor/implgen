@@ -477,6 +477,32 @@ func (p *fileParser) parseFieldList(pkg string, fields []*ast.Field) ([]*model.P
 
 func (p *fileParser) parseType(pkg string, typ ast.Expr) (model.Type, error) {
 	switch v := typ.(type) {
+	case *ast.IndexExpr:
+		t, err := p.parseType(pkg, v.X)
+		if err != nil {
+			return nil, err
+		}
+		typ, err := p.parseType(pkg, v.Index)
+		if err != nil {
+			return nil, err
+		}
+		return &model.GenericType{T: t, Types: []model.Type{typ}}, nil
+	case *ast.IndexListExpr:
+
+		t, err := p.parseType(pkg, v.X)
+		if err != nil {
+			return nil, err
+		}
+		types := []model.Type{}
+		for _, v := range v.Indices {
+			typ, err := p.parseType(pkg, v)
+			if err != nil {
+				return nil, err
+			}
+
+			types = append(types, typ)
+		}
+		return &model.GenericType{T: t, Types: types}, nil
 	case *ast.ArrayType:
 		ln := -1
 		if v.Len != nil {

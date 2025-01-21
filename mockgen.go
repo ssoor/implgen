@@ -50,6 +50,7 @@ var (
 	source          = flag.String("source", "", "接口定义文件/源文件，工具根据源文件生成输出结果")
 	destination     = flag.String("destination", "", "指定输出文件路径，默认将内容输出到控制台")
 	implNames       = flag.String("impl_names", "", "传参为逗号分隔的 `intefaceName=implementName` 对，用来指定接口生成的结构名。默认名会根据 `interfaceName `生成，如果 `interfaceName` 后缀为 `Interface` 则删除 `Interface` 后缀后作为名称，如果没有 `Interface` 后缀就直接使用 `interfaceName`")
+	implInterfaces  = flag.String("impl_interfaces", "", "传参为逗号分隔的接口名")
 	packageOut      = flag.String("package", "", "代码生成的包名（package <包名>）")
 	selfPackage     = flag.String("self_package", "", "The full package import path for the generated code. The purpose of this flag is to prevent import cycles in the generated code by trying to include its own package. This can happen if the mock's package is set to one of its inputs (usually the main one) and the output is stdio so mockgen cannot detect the final output package. Setting this flag will then tell mockgen which import to exclude.")
 	writePkgComment = flag.Bool("write_package_comment", false, "Writes package documentation comment (godoc) if true.")
@@ -126,7 +127,10 @@ func main() {
 		}
 	}
 
-	g := new(generator)
+	g := &generator{
+		mockNames:      make(map[string]string),
+		mockInterfaces: make(map[string]bool),
+	}
 	if *destination != "" {
 		g.dstFileName = *destination
 	}
@@ -139,6 +143,12 @@ func main() {
 
 	if *implNames != "" {
 		g.mockNames = parseMockNames(*implNames)
+	}
+	if *implInterfaces != "" {
+		for _, v := range strings.Split(*implInterfaces, ",") {
+			v := strings.TrimSpace(v)
+			g.mockInterfaces[v] = true
+		}
 	}
 	if *copyrightFile != "" {
 		header, err := ioutil.ReadFile(*copyrightFile)
