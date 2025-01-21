@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -128,8 +129,9 @@ func main() {
 	}
 
 	g := &generator{
-		mockNames:      make(map[string]string),
-		mockInterfaces: make(map[string]bool),
+		mockNames:            make(map[string]string),
+		mockInterfaces:       make(map[string]bool),
+		mockInterfaceRegexps: make([]*regexp.Regexp, 0),
 	}
 	if *destination != "" {
 		g.dstFileName = *destination
@@ -147,7 +149,16 @@ func main() {
 	if *implInterfaces != "" {
 		for _, v := range strings.Split(*implInterfaces, ",") {
 			v := strings.TrimSpace(v)
-			g.mockInterfaces[v] = true
+
+			if v[0] == '^' {
+				exp, err := regexp.Compile(v)
+				if err != nil {
+					log.Fatalf("Failed reading impl_interfaces arguments: %v", err)
+				}
+				g.mockInterfaceRegexps = append(g.mockInterfaceRegexps, exp)
+			} else {
+				g.mockInterfaces[v] = true
+			}
 		}
 	}
 	if *copyrightFile != "" {

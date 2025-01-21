@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,8 +24,9 @@ type generator struct {
 	indent                    string
 	mockNames                 map[string]string // may be empty
 	mockInterfaces            map[string]bool   // may be empty
-	filename                  string            // may be empty
-	srcPackage, srcInterfaces string            // may be empty
+	mockInterfaceRegexps      []*regexp.Regexp
+	filename                  string // may be empty
+	srcPackage, srcInterfaces string // may be empty
 	copyrightHeader           string
 
 	packageMap map[string]string // map from import path to package name
@@ -164,8 +166,18 @@ func (g *generator) generate(pkg *model.Package, dstPkg *model.Package, outputPk
 	}
 
 	for _, intf := range pkg.Interfaces {
-		if len(g.mockInterfaces) != 0 && !g.mockInterfaces[intf.Name] {
-			continue
+		if !g.mockInterfaces[intf.Name] {
+			match := false
+			for _, v := range g.mockInterfaceRegexps {
+				if v.Match([]byte(intf.Name)) {
+					match = true
+					break
+				}
+			}
+
+			if !match {
+				continue
+			}
 		}
 
 		sn, exist := namesMap[g.mockName(intf.Name)]
